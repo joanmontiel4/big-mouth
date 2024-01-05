@@ -1,0 +1,47 @@
+service: big-mouth
+
+frameworkVersion: "3.34.0"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-west-1
+  iamRoleStatements:    #needed for accessing permissions to our dynamo database
+    - Effect: Allow
+      Action: dynamodb:scan
+      Resource: arn:aws:dynamodb:eu-west-1:011795621380:table/restaurants #arn:aws:dynamodb:#{aws:region}:#{aws:accountId}:table/restaurants
+
+functions:
+  get-index:
+    handler: functions/get-index.handler
+    events:
+      - http:
+          path: /
+          method: get
+          #cors: true    #-> not necessary
+    environment:
+      restaurants_api: https://pebjr2fkb5.execute-api.eu-west-1.amazonaws.com/dev/restaurants
+  get-restaurants:
+    handler: functions/get-restaurants.handler
+    events:
+      - http:
+          path: /restaurants/
+          method: get
+    environment:
+      restaurants_table: restaurants
+      
+resources:       #Adds a DynamoDB table to the project
+  Resources:
+    restaurantsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: restaurants
+        AttributeDefinitions:
+          - AttributeName: name
+            AttributeType: S
+        KeySchema:
+          - AttributeName: name
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
